@@ -7,29 +7,40 @@
 
 # Driver Fatigue Detection Algorithm Intro
 
-`Driver Fatigue Detection Algorithm` (Graduate Project), 'DFDA' for short, is an algorithm to evaluate driver status, in which `deep learning` algorithm, as a means of feature point detection, is the cornerstone of subsequent analysis, YOLOv8-pose is adopted as a pose estimation method, and facial keypoint detection is realized by using functions in Dlib.
+`Driver Fatigue Detection Algorithm` (Graduate Project), 'DFDA' for short, is an algorithm to evaluate driver status, in which the `deep learning` algorithm, as a means of feature point detection, is the cornerstone of subsequent analysis, YOLOv8-pose is adopted as a pose estimation method, and facial keypoint detection is realized by using functions in Dlib.
 A prototype system based on the algorithm is still under development, but the basic functions of the algorithm have been implemented and can be demonstrated. At present, the efficiency of the algorithm is 7 fps on m3 chip and 6 fps on Nvidia 2070s.
 
 Please start with the `my_pre.py`.
+****
+## Current situation
+**At present, I have completed the image analysis algorithm based on rule judgment, and its accuracy rate is above 85%, based on which I created the image datasets, and trained the model after cleaning the wrong data, but the accuracy rate is low.  The audio analysis framework and functions have been implemented, However, because there are no suitable datasets containing yawning, the current judgment can only be made by calculating cosine similarity.**
+
+## Ongoing work
+**Expand data set to improve model accuracy. Try to optimize the audio analysis method.**
 
 ## Research thoughts
 **Preliminary work**
 + Read paper
     + In the past two years, few studies have realized fatigue state analysis based on facial key points and pose estimation key points. Therefore, I mainly refer to the feasibility of the algorithm implementation.
 + Compare different algorithms
-    + I mainly compared AlphaPose, OpenPose and YOLOv8-pose algorithms. The main reason for the victory of YOLOv8-pose is that it is too convenient on the basis of high efficiency and accuracy.
+    + I mainly compared AlphaPose, OpenPose, and YOLOv8-pose algorithms. The main reason for the victory of YOLOv8-pose is that it is too convenient on the basis of high efficiency and accuracy.
 
 **Feature engineering**
 + Pose keypoint
-    + The order of key points in yolov8 starting from 0 is (the following points are not written because they are not used) : “nose”,“left_eye”, “right_eye”,“left_ear”, “right_ear”,“left_shoulder”, “right_shoulder”,“left_elbow”,  “right_elbow”, etc. However, only the first 7 points can be always detected in this case.
+    + The order of key points in yolov8 starting from 0 is (the following points are not written because they are not used) : “nose”,“left_eye”, “right_eye”,“left_ear”, “right_ear”,“left_shoulder”, “right_shoulder”,“left_elbow”,  “right_elbow”, etc. However, only the first 7 points can always be detected in this case.
 + Face keypoint
-    + Extracting 6 points of each eye and 8 point of mouth, 20 in total
+    + Extracting 6 points of each eye and 8 points of mouth, 20 in total
++ Audio feature extraction
+    + The Mel-scaleFrequency Cepstral Coefficients of yawning audio was extracted and used as the feature of audio detection, MFCC for short.
++ Model training
+    + After completing the analysis method based on multi-rule judgments, a data set should be created to train the model.
  
 **Algorithm development**
 + Basic idea
-    + The algorithm needs to take into account some basic physiological activities of people (blinking, speaking, etc.), and at the same time, everyone has different blinking habits, so each frame cannot be directly used as the basis for analysis, and the algorithm also needs to adapt to the particularity of individuals. 
-    + The algorithm used the `sliding window` to record the normal condition of the driver's eyes and the situation of nearly 10 frames, and distinguished the driver's state based on the mean `value and standard deviation`.The opening of the mouth is also analyzed.
-    + For the analysis of posture, I calculated the standard deviation of the first 7 points of the human body (mentioned above) in the process of algorithm design (before establishing rules). Under the resolution of 640*480, the `standard deviation` of the coordinate of the human nose image is usually more than 30 (the last 20 frames), and the `standard deviation` of the shoulder coordinate is more than 20.
+    + The input to the algorithm includes images and audio. And the algorithm needs to take into account some basic physiological activities of people (blinking, speaking, etc.), and at the same time, everyone has different blinking habits, so each frame cannot be directly used as the basis for analysis, and the algorithm also needs to adapt to the particularity of individuals. 
+    + The algorithm used the `sliding window` to record the normal condition of the driver's eyes, the situation of nearly 10 frames, previous 3 seconds of audio, and distinguished the driver's state based on the mean `value and standard deviation`.The opening of the mouth is also analyzed.
+    + For the analysis of posture, I calculated the standard deviation of the first 7 points of the human body (mentioned above) in the algorithm design process (before establishing rules). Under the resolution of 640*480, the `standard deviation` of the coordinate of the human nose image is usually more than 30 (the last 20 frames), and the `standard deviation` of the shoulder coordinate is more than 20.
+
 
 
 ## Methods
@@ -38,13 +49,14 @@ Please start with the `my_pre.py`.
 
 + Model Loading
     + Face predictor
-        + Using the Dlib open source model
+        + Using the Dlib open source model.
     + Pose predictor
-        + Using model trained on the coco dataset
+        + Using a model trained on the coco dataset.
     
 + Feature extraction
-    + Face point detection
-    + Pose estimation
+    + Face point detection.
+    + Pose estimation.
+    + Audio recording.
 
 **Initialization**
 + When initialization is not complete, fill the const stack with data. After that, the detection would start.
@@ -113,9 +125,15 @@ else:
             'mar_threshold': 0.6,  # If the mouth aspect ratio is greater than 0.6, it is considered yawning
         } ```
 
++ Prediction based on machine learning
+    + The image analysis algorithm first implements the rule-based analysis method,  which has a high accuracy. I use this method as a labeling method to create a data set for machine learning modeling,  and train the model based on it (the current effect of the prediction by models is not particularly good). At the same time, audio detection is less accurate, so it is not a feature of machine learning.
++ Audio matching
+    + Save previous 3 seconds of audio with a sliding window. The cosine_similarity is calculated using two MFCC of the model audio and the actual audio.
+      
+
 ## Result Analysis
 + Algorithm accuracy
-    + The algorithm is close to 90% accurate in the analysis function (based on my own labeled videos).
-    + In the detection function, the accuracy of facial key point detection is not high, around 70%.
+    + The algorithm is nearly 90% accurate in the analysis function (based on my labeled videos).
+    + In the detection function, the accuracy of facial keypoint detection is not high, around 70%.
 + Algorithm efficiency
     + The current efficiency is 7 fps, considering that my computer has an efficiency of 17 fps using YOLOv8-pose alone, I don't think the time complexity of the algorithm is very high
