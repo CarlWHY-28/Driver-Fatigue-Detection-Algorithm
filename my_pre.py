@@ -13,7 +13,6 @@ from scipy.spatial.distance import cosine
 import librosa
 from utils.audio_utils import calculate_mfcc
 
-
 # Load model
 model = YOLO("models/best.pt")
 pose_model = YOLO("models/new_best.pt")
@@ -34,7 +33,7 @@ connections = [
 # Initialize stacks to store the state of eyes and mouth, keeping the earliest 50 frames
 con_ear_stack = []
 con_mouth_stack = []
-con_flag = False   # Flag to initialize the state
+con_flag = False  # Flag to initialize the state
 
 # Initialize stacks for a moving window to save the most recent 10 frames of eye and mouth states
 alarm_ear_stack = []
@@ -58,7 +57,6 @@ alarm_r_shoulder_stack = []
 # Initialize variables to store the mean and standard deviation of eye aspect ratio (EAR)
 ear_mean = -1
 ear_std = -1
-
 
 result_list = []  # [con_EAR_mean - cur_EAR_mean, MAR, Nose_std, Shoulder_std_mean, the relative position of nose, pre_status] .Store the results of the driver's status evaluation, which will be used to train the multi-model
 
@@ -85,13 +83,14 @@ yawning_sound_detect = False
 
 y1, sr = librosa.load(test_real_audio_path, sr=RATE)
 
-y1 = np.concatenate([y1]*50, axis=0)
+y1 = np.concatenate([y1] * 50, axis=0)
 
 # save recent 3 seconds of audio data in the sliding window
 sliding_window = []
 
 # load the audio file
-window_size_samples = int(RATE//1024 * 333 * window_size_seconds)
+window_size_samples = int(RATE // 1024 * 333 * window_size_seconds)
+
 
 # Define a function to evaluate the driver's status based on an array of status
 def evaluate_driver(status_arry):
@@ -118,6 +117,7 @@ def fishing_detect(landmarks):
         print('钓鱼!!!')  # fishing!!!
         return True
     return False
+
 
 # Define a function to calculate head activity score based on the movement of the head landmarks
 def if_head_still(landmarks):
@@ -175,7 +175,8 @@ def if_shoulder_still(landmarks):
         alarm_r_shoulder_stack.pop(0)
         alarm_r_shoulder_stack.append(x2)
 
-        if (np.std(alarm_l_shoulder_stack) + np.std(alarm_r_shoulder_stack))/2 < thresholds['shoulder_activity_threshold']:
+        if (np.std(alarm_l_shoulder_stack) + np.std(alarm_r_shoulder_stack)) / 2 < thresholds[
+            'shoulder_activity_threshold']:
             print('Shoulder still')
             return True
     return False
@@ -207,11 +208,7 @@ def eye_and_mouth_analyse(ear, mar):
             # 计算标准差
             ear_std = np.std(con_ear_stack)
             ear_mean = np.mean(con_ear_stack)
-
             con_flag = True
-            print('ear init done')
-            print('ear_mean:', ear_mean)
-            print('ear_std:', ear_std)
 
     if len(alarm_ear_stack) < 10:
         alarm_ear_stack.append(ear)
@@ -221,22 +218,19 @@ def eye_and_mouth_analyse(ear, mar):
         alarm_ear_stack.append(ear)
         alarm_mouth_stack.pop(0)
         alarm_mouth_stack.append(mar)
-
         if con_flag:
-
+            cur_ear_mean = np.mean(alarm_ear_stack)
             if ear > ear_mean + 2 * ear_std:  # over 2 times of standard deviation, abnormal
                 print("eye acting abnormal\n")
                 result[0] = False
-                result[1] = np.mean(alarm_ear_stack)
+                result[1] = cur_ear_mean
                 result[2] = ear_mean
                 result[3] = np.mean(alarm_mouth_stack)
                 result[4] = 'eye acting abnormal'
             else:
-                #print("数据正常\n")
-                #print("当前窗口ear:", np.mean(alarm_ear_stack))
-                if np.mean(alarm_ear_stack) < np.mean(con_ear_stack) - 0.1:
+                if cur_ear_mean < ear_mean - 0.1:
                     # driver normal ear
-                    print("const ear:", np.mean(con_ear_stack))
+                    print("const ear:", ear_mean)
                     print("eye closed\n\n")  # eye closed
                     result[0] = False
                     result[1] = np.mean(alarm_ear_stack)
@@ -244,7 +238,7 @@ def eye_and_mouth_analyse(ear, mar):
                     result[3] = np.mean(alarm_mouth_stack)
                     result[4] = 'eye closed '
                 else:
-                    print("const ear:", np.mean(con_ear_stack))
+                    print("const ear:", ear_mean)
                     result[0] = True
                     result[1] = np.mean(alarm_ear_stack)
                     result[2] = ear_mean
@@ -257,6 +251,7 @@ def eye_and_mouth_analyse(ear, mar):
                 result[3] = np.mean(alarm_mouth_stack)
                 result[4] += 'yawning'
             return result
+
 
 # Define a function to detect facial landmarks
 def face_point_detect(f_detector, f_predictor, org_frame):
@@ -279,14 +274,15 @@ def face_point_detect(f_detector, f_predictor, org_frame):
         eye_landmarks = [landmarks.part(n) for n in range(36, 48)]
         mouth_landmarks = [landmarks.part(n) for n in range(60, 68)]
 
-        landmarks_list += (eye_landmarks)
-        landmarks_list += (mouth_landmarks)
+        landmarks_list += eye_landmarks
+        landmarks_list += mouth_landmarks
 
         new_list = []
         for landmark in landmarks_list:
             new_list.append([int(landmark.x), int(landmark.y)])
 
     return new_list
+
 
 # Define a function to draw the pose keypoints on an image
 
@@ -304,8 +300,9 @@ def draw_pose(landmarks, image):
     for (a, b) in connections:
         # print(landmarks[a],'   ', landmarks[b])
         if landmarks[a][0] != 0 and landmarks[a][1] != 0 and landmarks[b][0] != 0 and landmarks[b][
-                1] != 0:  # make sure the points are valid
-            cv2.line(image, (int(landmarks[a][0]), int(landmarks[a][1])), (int(landmarks[b][0]), int(landmarks[b][1])),
+            1] != 0:  # make sure the points are valid
+            cv2.line(image, (int(landmarks[a][0]), int(landmarks[a][1])),
+                     (int(landmarks[b][0]), int(landmarks[b][1])),
                      (0, 255, 0), 2)
 
 
@@ -341,7 +338,7 @@ if __name__ == '__main__':
                 cv2.putText(frame, text, (10, 460),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
                 result_list[len(result_list) - 1][0] = ear_mean - \
-                    np.mean(alarm_ear_stack)
+                                                       np.mean(alarm_ear_stack)
                 result_list[len(result_list) - 1][1] = face_result[3]
                 if face_result[0]:
                     result_list[len(result_list) - 1][5] = 1
@@ -356,12 +353,12 @@ if __name__ == '__main__':
                  fishing_detect(pose_xy_list)])
             print(np.std(alarm_head_stack))
             print(np.mean(np.std(alarm_l_shoulder_stack) +
-                  np.std(alarm_r_shoulder_stack)))
+                          np.std(alarm_r_shoulder_stack)))
             print(len(alarm_head_stack))
             result_list[len(result_list) - 1][2] = np.std(alarm_head_stack) - \
-                thresholds['head_stability_threshold']
+                                                   thresholds['head_stability_threshold']
             result_list[len(result_list) - 1][3] = (np.std(alarm_l_shoulder_stack) + np.std(
-                alarm_r_shoulder_stack))/2 - thresholds['shoulder_activity_threshold']
+                alarm_r_shoulder_stack)) / 2 - thresholds['shoulder_activity_threshold']
             if eva_result:
                 result_list[len(result_list) - 1][5] = 1
 
@@ -372,10 +369,7 @@ if __name__ == '__main__':
             [result_list[len(result_list) - 1][0:5]])
         if pred == 1:
             print('abnormal based on model predict')
-            pre_list.append(1)
-        else:
-
-            pre_list.append(0)
+        pre_list.append(pred[0])
 
         frame_count += 1
         current_time = time.time()
@@ -387,13 +381,13 @@ if __name__ == '__main__':
         # to make sure the audio feature is calculated every second
         if current_time - frame_start_time >= current_second_count:
             sliding_window.append(
-                y1[current_second_count*window_size_samples:(current_second_count+1)*window_size_samples])
+                y1[current_second_count * window_size_samples:(current_second_count + 1)
+                                                              * window_size_samples])
             current_second_count += 1
             if len(sliding_window) > 3:
                 sliding_window.pop(0)
                 print('The', current_second_count, 'second audio feature:',
                       calculate_mfcc(sliding_window, RATE, mfccs0))
-
 
         fps = fps.__format__('.2f')
         cv2.putText(frame, f"FPS: {fps}", (10, 30),
@@ -404,7 +398,7 @@ if __name__ == '__main__':
             save the result to a csv file, as the training data for the multi-model
             """
             # df = pd.DataFrame(result_list, columns=[
-            #                   'con_EAR_mean - cur_EAR_mean', 'MAR', 'Nose_std', 'Shoulder_std_mean', 'nose_position', 'pre_status'])
+            #'con_EAR_mean - cur_EAR_mean', 'MAR', 'Nose_std', 'Shoulder_std_mean', 'nose_position', 'pre_status'])
             # df.to_csv('result.csv', index=False)
             # # 对比result_list和pre_list
             # n_r_l=result_list[50:]
@@ -413,6 +407,6 @@ if __name__ == '__main__':
             # for i in range(len(n_r_l)):
             #     if n_r_l[i][5]==n_p_l[i]:
             #         cc+=1
-            # print('准确率:',cc/len(n_r_l))
+            # print('accuracy:',cc/len(n_r_l))
 
             break
