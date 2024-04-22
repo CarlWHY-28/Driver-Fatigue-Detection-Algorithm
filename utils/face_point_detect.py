@@ -8,7 +8,7 @@ import os
 def LoadModel():
     
     detector = dlib.get_frontal_face_detector()
-    file_path = "shape_predictor_68_face_landmarks.dat"
+    file_path = "models/shape_predictor_68_face_landmarks.dat"
     #看看找不找得到文件
     
     
